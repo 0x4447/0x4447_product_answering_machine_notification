@@ -1,28 +1,32 @@
 {
-  "Name": "ContactFlowEvent",
-  "Details": {
-    "ContactData": {
-      "Attributes": {
-        "first_name": "David"
-      },
-      "Channel": "VOICE",
-      "ContactId": "4a573372-1f28-4e26-b97b-XXXXXXXXXXX",
-      "CustomerEndpoint": {
-        "Address": "+1234567890",
-        "Type": "TELEPHONE_NUMBER"
-      },
-      "InitialContactId": "4a573372-1f28-4e26-b97b-XXXXXXXXXXX",
-      "InitiationMethod": "INBOUND | OUTBOUND | TRANSFER | CALLBACK",
-      "InstanceARN": "arn:aws:connect:aws-region:1234567890:instance/c8c0e68d-2200-4265-82c0-XXXXXXXXXX",
-      "PreviousContactId": "4a573372-1f28-4e26-b97b-XXXXXXXXXX",
-      "Queue": "QueueName",
-      "SystemEndpoint": {
-        "Address": "+1234567890",
-        "Type": "TELEPHONE_NUMBER"
-      }
+    "Details": {
+        "ContactData": {
+            "Attributes": {
+                "Message": "my name is david can you send a message for david",
+                "first_name": "david"
+            },
+            "Channel": "VOICE",
+            "ContactId": "66686d43-fdcc-4be8-b508-0dee2dc6ae46",
+            "CustomerEndpoint": {
+                "Address": "+15554441234",
+                "Type": "TELEPHONE_NUMBER"
+            },
+            "InitialContactId": "66686d43-fdcc-4be8-b508-0dee2dc6ae46",
+            "InitiationMethod": "INBOUND",
+            "InstanceARN": "arn:aws:connect:us-east-1:718280524074:instance/a57fc521-433e-474a-8b98-142be63de8da",
+            "MediaStreams": {
+                "Customer": {
+                    "Audio": null
+                }
+            },
+            "PreviousContactId": "66686d43-fdcc-4be8-b508-0dee2dc6ae46",
+            "Queue": null,
+            "SystemEndpoint": {
+                "Address": "+15554441234",
+                "Type": "TELEPHONE_NUMBER"
+            }
+        },
+        "Parameters": {}
     },
-    "Parameters": {
-      "sentAttributeKey": "sentAttributeValue"
-    }
-  }
+    "Name": "ContactFlowEvent"
 }
