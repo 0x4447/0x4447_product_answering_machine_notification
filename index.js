@@ -1,80 +1,120 @@
-let aws = require('aws-sdk');
+let AWS = require('aws-sdk');
 
 //
-//  Create a Lambda object for invocation
+//  Create the DynamoDB object.
 //
-let lambda = new aws.Lambda({
+let ddb = new AWS.DynamoDB.DocumentClient({
+    apiVersion: '2012-08-10',
     region: process.env.AWS_REGION
 });
 
 //
-//  This function is responsabile for getting all the information from the
-//  phone conversation and create a email out of all of this.
+//  Create the Simple Notification System object.
+//
+let sns = new AWS.SNS({
+    apiVersion: '2010-03-31'
+});
+
+//
+//  This function will be triggered by connect with all the details of the
+//  conversation, so in this case we can save the message left and send
+//  it to SNS.
 //
 exports.handler = (event) => {
 
     return new Promise(function(resolve, reject) {
 
         //
-        //  1.  Get all the data from the flow and save it in clear variables.
+        //  1.  Create a container to pass around the promises.
         //
-        let name = event.Details.ContactData.Attributes.first_name;
-        let phone_nr = event.Details.ContactData.CustomerEndpoint.Address;
-        let message = event.Details.ContactData.Attributes.Message;
-
-        //
-        //  2.  Check if we got a message, and if not set a default one.
-        //
-        if(!message)
-        {
-            message = "No message left.";
+        let container = {
+            //
+            //  Organize all the data that we get so we know what
+            //  this code uses.
+            //
+            req: {
+                phone_nr: event.Details.ContactData.CustomerEndpoint.Address,
+                message: event.Details.ContactData.Attributes.Message,
+                name: event.Details.ContactData.Attributes.first_name
+            },
+            //
+            //  The message to be sent.
+            //
+            message: "",
+            //
+            //  Hold the response for Connect.
+            //
+            res: 'OK'
         }
 
         //
-        //  3.  Use an array to create the body of the email so we can easily
-        //      do changes and work with the txt.
+        //  ->  Start the chain.
         //
-        //      This approach is much more easy to manage and maintain.
-        //
-        let body = [
-            "Hi,",
-            "\n\r\n\r",
-            "You have a new message from " + name,
-            "\n\r\n\r",
-            "The message goes like this: " + message,
-            "\n\r\n\r",
-            "You can call back with this phone Nr.: " + phone_nr,
-            "\n\r\n\r",
-            "Take care."
-        ];
+        save_the_message(container)
+            .then(function(container) {
+
+                return create_the_message(container);
+
+            }).then(function(container) {
+
+                return send_the_message(container);
+
+            }).then(function(container) {
+
+                return resolve(container.res);
+
+            }).catch(function(error) {
+
+                return reject(error);
+
+            });
+
+    });
+
+};
+
+//   _____    _____     ____    __  __   _____    _____   ______    _____
+//  |  __ \  |  __ \   / __ \  |  \/  | |_   _|  / ____| |  ____|  / ____|
+//  | |__) | | |__) | | |  | | | \  / |   | |   | (___   | |__    | (___
+//  |  ___/  |  _  /  | |  | | | |\/| |   | |    \___ \  |  __|    \___ \
+//  | |      | | \ \  | |__| | | |  | |  _| |_   ____) | | |____   ____) |
+//  |_|      |_|  \_\  \____/  |_|  |_| |_____| |_____/  |______| |_____/
+//
+
+//
+//  This lambda saves the name that the user over the phone said.
+//
+function save_the_message(container) {
+
+    return new Promise(function(resolve, reject) {
+
+        console.info('save_the_message');
 
         //
-        //  4.  Create the email based on all the data that we colected.
+        //  1.  Get the actual time, to organize our data in DDB.
         //
-        let email = {
-            from    : process.env.FROM,
-            to      : process.env.TO,
-            reply_to: process.env.REPLY_TO,
-            subject : "You have a new Voice Message",
-            text    : body.join('') || ''
-        };
+        let timestamp = Math.floor(Date.now() / 1000);
 
         //
-        //  5.  Prepare the Lambda Invocation with all the data that needs to be
-        //      passed to the Lambda to sucesfully send the email.
+        //  2.  Prepare the query.
         //
         let params = {
-            FunctionName: 'Toolbox_Send_Email',
-            Payload: JSON.stringify(email, null, 2),
+            TableName: "0x4447_connect_sessions",
+            Item: {
+                id: container.req.phone_nr,
+                type: 'message#' + timestamp,
+                message: container.req.message,
+                timestamp_created: timestamp
+            },
         };
 
         //
-        //  6.  Invoke the Lambda Function
+        //  3.  Execute the query
         //
-        lambda.invoke(params, function(error, data) {
+        ddb.put(params, function(error, data) {
 
             //
-            //  1.  Check if there was an error in invoking the fnction
+            //  1.  Check if there were any errors.
             //
             if(error)
             {
@@ -83,26 +123,86 @@ exports.handler = (event) => {
             }
 
             //
-            //  2.  Convert the payload to JS
+            //  ->  Move to the next Promise.
             //
-            let response = JSON.parse(data.Payload);
+            return resolve(container);
+
+        });
+
+    });
+};
+
+function create_the_message(container) {
+
+    return new Promise(function(resolve, reject) {
+
+        console.info('create_the_message');
+
+        //
+        //  1.  Use an array to make a message since it is easier to work with.
+        //
+        let message = [
+            "Greetings Human,", "\n",
+            "\n",
+            "You just got a new voice message, here are the details:", "\n",
+            "\n",
+            "- Name: " + container.req.name, "\n",
+            "- Phone Nr.: " + container.req.phone_nr, "\n",
+            "- Message: " + container.req.message, "\n",
+            "\n",
+            "Enjoy your existence."
+        ]
+
+        //
+        //  2.  Combine the array in to a single string.
+        //
+        container.message = message.join('');
+
+        //
+        //  ->  Move to the next Promise.
+        //
+        return resolve(container);
+
+    });
+
+};
+
+//
+//  Send a message to whoever is interest to know that a new phone call happened.
+//
+function send_the_message(container) {
+
+    return new Promise(function(resolve, reject) {
+
+        console.info('send_the_message');
+
+        //
+        //  1.  Prepare the query.
+        //
+        let params = {
+            Subject: 'New message on your voice mail.',
+            Message: container.message,
+            TopicArn: process.env.SNS_TOPIC
+        };
+
+        //
+        //  ->  Execute the query.
+        //
+        sns.publish(params, function(error, data) {
 
             //
-            //  3.  Check if there was an error
+            //  1.  Check if there were any errors.
             //
-            if(response.errorMessage)
+            if(error)
             {
-                //
-                //  ->  Stop here and surface the error
-                //
                 console.info(params);
-                return reject(new Error(response.errorMessage));
+                return reject(error);
             }
 
             //
-            //  ->  Tell Lambda that we are done working.
+            //  ->  Move to the next Promise.
             //
-            return resolve({});
+            return resolve(container);
 
         });
 
