@@ -35,7 +35,7 @@ exports.handler = (event) => {
             req: {
                 phone_nr: event.Details.ContactData.CustomerEndpoint.Address,
                 message: event.Details.ContactData.Attributes.Message,
-                name: event.Details.ContactData.Attributes.first_name
+                name: event.Details.ContactData.Attributes.first_name || "N/A"
             },
             //
             //  The message to be sent.
